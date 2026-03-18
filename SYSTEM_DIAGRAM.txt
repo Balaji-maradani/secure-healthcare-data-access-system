@@ -1,0 +1,240 @@
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║           SECURE HEALTHCARE DATA ACCESS SYSTEM - CP-ABE ARCHITECTURE         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           PRESENTATION LAYER                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐             │
+│      │     Web     │      │   Mobile    │      │   Desktop   │             │
+│      │  Dashboard  │      │     App     │      │     CLI     │             │
+│      └──────┬──────┘      └──────┬──────┘      └──────┬──────┘             │
+│             └─────────────────────┴─────────────────────┘                   │
+│                                   │                                          │
+│                            ┌──────▼──────┐                                  │
+│                            │   REST API  │                                  │
+│                            │  (FastAPI)  │                                  │
+│                            └──────┬──────┘                                  │
+└────────────────────────────────────┼───────────────────────────────────────┘
+                                     │
+┌────────────────────────────────────▼───────────────────────────────────────┐
+│                          APPLICATION LAYER                                  │
+├─────────────────────────┬──────────────────────┬──────────────────────────┤
+│                         │                      │                          │
+│  ┌───────────────────┐ │ ┌─────────────────┐ │ ┌──────────────────────┐ │
+│  │ USER MANAGEMENT   │ │ │ POLICY ENGINE   │ │ │ ENCRYPTION SERVICE   │ │
+│  ├───────────────────┤ │ ├─────────────────┤ │ ├──────────────────────┤ │
+│  │ • Create Users    │ │ │ • Create Policy │ │ │ • Hybrid Encryption  │ │
+│  │ • Assign Attrs    │ │ │ • Validate Expr │ │ │ • AES-256 + CP-ABE   │ │
+│  │ • Manage Roles    │ │ │ • Evaluate POL  │ │ │ • SHA-3 Hashing      │ │
+│  │ • Generate Keys   │ │ │ • Match Users   │ │ │ • Key Management     │ │
+│  └───────────────────┘ │ └─────────────────┘ │ └──────────────────────┘ │
+│                         │                      │                          │
+│  ┌───────────────────┐ │ ┌─────────────────┐ │ ┌──────────────────────┐ │
+│  │ ATTRIBUTE MGR     │ │ │ ACCESS CONTROL  │ │ │ DECRYPTION SERVICE   │ │
+│  ├───────────────────┤ │ ├─────────────────┤ │ ├──────────────────────┤ │
+│  │ • Validate Attrs  │ │ │ • Check Access  │ │ │ • Controlled Decrypt │ │
+│  │ • Hierarchy       │ │ │ • Enforce POL   │ │ │ • Integrity Check    │ │
+│  │ • Custom Attrs    │ │ │ • Audit Log     │ │ │ • Policy Validation  │ │
+│  └───────────────────┘ │ └─────────────────┘ │ └──────────────────────┘ │
+└─────────────────────────┴──────────────────────┴──────────────────────────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │                │                │
+┌───────────────────▼─────┬──────────▼────────┬───────▼────────────────────┐
+│   CRYPTOGRAPHIC LAYER   │  DATA MODELS      │    STORAGE LAYER           │
+├─────────────────────────┼───────────────────┼────────────────────────────┤
+│                         │                   │                            │
+│ ┌─────────────────────┐ │ ┌───────────────┐ │ ┌────────────────────────┐ │
+│ │     CP-ABE ENGINE   │ │ │  User Model   │ │ │   Encrypted Files      │ │
+│ ├─────────────────────┤ │ ├───────────────┤ │ │  /storage/encrypted/   │ │
+│ │ • Master Keys      │ │ │ • user_id     │ │ │                        │ │
+│ │ • User Keygen      │ │ │ • attributes  │ │ │  FILE_XXX.enc          │ │
+│ │ • Encrypt/Decrypt  │ │ │ • role/dept   │ │ │  (AES-256 encrypted)   │ │
+│ │ • Policy Check     │ │ └───────────────┘ │ └────────────────────────┘ │
+│ └─────────────────────┘ │                   │                            │
+│                         │ ┌───────────────┐ │ ┌────────────────────────┐ │
+│ ┌─────────────────────┐ │ │ Policy Model  │ │ │    CP-ABE Keys         │ │
+│ │   AES-256 CIPHER    │ │ ├───────────────┤ │ │   /storage/keys/       │ │
+│ ├─────────────────────┤ │ │ • policy_id   │ │ │                        │ │
+│ │ • CBC Mode         │ │ │ • expression  │ │ │  KEY_XXX.cpabe         │ │
+│ │ • Key Generation   │ │ │ • is_active   │ │ │  (Policy-protected)    │ │
+│ │ • File Encryption  │ │ └───────────────┘ │ └────────────────────────┘ │
+│ │ • Streaming        │ │                   │                            │
+│ └─────────────────────┘ │ ┌───────────────┐ │ ┌────────────────────────┐ │
+│                         │ │ EncFile Model │ │ │      Metadata DB       │ │
+│ ┌─────────────────────┐ │ ├───────────────┤ │ │  /storage/metadata/    │ │
+│ │   SHA-3 HASHER      │ │ │ • file_id     │ │ │                        │ │
+│ ├─────────────────────┤ │ │ • patient_id  │ │ │  FILE_XXX.json         │ │
+│ │ • Compute Hash     │ │ │ • hash/iv     │ │ │  (File info + policy)  │ │
+│ │ • Verify Integrity │ │ │ • policy      │ │ └────────────────────────┘ │
+│ │ • Integrity Tags   │ │ └───────────────┘ │                            │
+│ └─────────────────────┘ │                   │ ┌────────────────────────┐ │
+│                         │                   │ │     Audit Logs         │ │
+│ ┌─────────────────────┐ │                   │ │  /storage/audit_logs/  │ │
+│ │    KEY MANAGER      │ │                   │ │                        │ │
+│ ├─────────────────────┤ │                   │ │  access_log.txt        │ │
+│ │ • Generate Keys    │ │                   │ │  (All access attempts) │ │
+│ │ • Store Securely   │ │                   │ │                        │ │
+│ │ • Key Rotation     │ │                   │ └────────────────────────┘ │
+│ │ • Export/Import    │ │                   │                            │
+│ └─────────────────────┘ │                   │                            │
+└─────────────────────────┴───────────────────┴────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          ENCRYPTION WORKFLOW                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    Patient File (Plaintext)
+           │
+           ▼
+    ┌──────────────┐
+    │  1. Generate │
+    │  AES-256 Key │
+    └──────┬───────┘
+           │
+           ▼
+    ┌──────────────────┐          ┌─────────────────┐
+    │  2. Encrypt File │ ────────▶│ Encrypted File  │
+    │     (AES-256)    │          │      + IV       │
+    └──────┬───────────┘          └─────────────────┘
+           │
+           ▼
+    ┌──────────────────┐          ┌─────────────────┐
+    │  3. Compute Hash │ ────────▶│  SHA-3 Hash     │
+    │     (SHA-3)      │          │  (Integrity)    │
+    └──────┬───────────┘          └─────────────────┘
+           │
+           ▼
+    ┌──────────────────┐
+    │  4. Encrypt Key  │
+    │  using CP-ABE    │
+    │  with Policy:    │
+    │  "Doctor AND     │
+    │   Cardiology"    │
+    └──────┬───────────┘
+           │
+           ▼
+    ┌──────────────────┐          ┌─────────────────┐
+    │  5. Store All    │ ────────▶│ • Encrypted File│
+    │   Components     │          │ • Encrypted Key │
+    │                  │          │ • Hash + Meta   │
+    └──────────────────┘          └─────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          DECRYPTION WORKFLOW                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    User Request (File ID + User + Private Key)
+           │
+           ▼
+    ┌──────────────────┐
+    │  1. Load File    │
+    │     Metadata     │
+    └──────┬───────────┘
+           │
+           ▼
+    ┌──────────────────┐          ┌─────────────────┐
+    │  2. Verify Hash  │ ───✓────▶│   Continue      │
+    │     (SHA-3)      │ ───✗────▶│   ABORT!        │
+    └──────┬───────────┘          │   (Tampered)    │
+           │                      └─────────────────┘
+           ▼
+    ┌──────────────────┐
+    │  3. Load         │
+    │  Encrypted Key   │
+    └──────┬───────────┘
+           │
+           ▼
+    ┌──────────────────┐
+    │  4. Decrypt Key  │
+    │  with CP-ABE     │
+    │  USER ATTRIBUTES │
+    │  vs              │
+    │  POLICY          │
+    └──────┬───────────┘
+           │
+           ├─────✓─────▶ Attributes Satisfy Policy
+           │            │
+           │            ▼
+           │      ┌──────────────┐      ┌─────────────────┐
+           │      │  5. Decrypt  │ ────▶│  Plaintext File │
+           │      │  File (AES)  │      │   (Success!)    │
+           │      └──────────────┘      └─────────────────┘
+           │
+           └─────✗─────▶ Policy NOT Satisfied
+                        │
+                        ▼
+                  ┌──────────────┐
+                  │ ACCESS DENIED│
+                  │ (Log attempt)│
+                  └──────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         SECURITY FEATURES                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🔐 ENCRYPTION                                                               │
+│  ✓ AES-256-CBC for data (military-grade)                                    │
+│  ✓ CP-ABE for access control (policy-embedded)                              │
+│  ✓ Unique IV per encryption                                                 │
+│  ✓ CSPRNG for key generation                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  🛡️  ACCESS CONTROL                                                          │
+│  ✓ Attribute-Based Access Control (ABAC)                                    │
+│  ✓ Fine-grained policies (Boolean expressions)                              │
+│  ✓ Role + Department + Clearance                                            │
+│  ✓ No key distribution required                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ✅ INTEGRITY                                                                │
+│  ✓ SHA-3 cryptographic hashing                                              │
+│  ✓ Pre-decryption verification                                              │
+│  ✓ Tamper detection                                                         │
+│  ✓ Integrity tags with metadata                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  📋 AUDIT                                                                    │
+│  ✓ All access attempts logged                                               │
+│  ✓ Success/failure tracking                                                 │
+│  ✓ Timestamp + user + file + reason                                         │
+│  ✓ Non-repudiation                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  🔑 KEY MANAGEMENT                                                           │
+│  ✓ Secure key generation                                                    │
+│  ✓ Proper key separation                                                    │
+│  ✓ Key rotation support                                                     │
+│  ✓ Secure deletion                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    EXAMPLE: POLICY ENFORCEMENT                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Policy: "Doctor AND Cardiology"
+
+┌──────────────────────┬─────────────────────────┬──────────────┐
+│       User           │      Attributes         │    Result    │
+├──────────────────────┼─────────────────────────┼──────────────┤
+│ Dr. Emily Carter     │ Doctor, Cardiology, L3  │ ✓ GRANTED    │
+│ Nurse Michael Brown  │ Nurse, Emergency, L2    │ ✗ DENIED     │
+│ Lab Tech Sarah Lee   │ Lab, Pathology, L1      │ ✗ DENIED     │
+│ Admin Lisa Wang      │ Admin, IT, L3           │ ✗ DENIED     │
+└──────────────────────┴─────────────────────────┴──────────────┘
+
+Policy: "(Doctor OR Nurse) AND Emergency"
+
+┌──────────────────────┬─────────────────────────┬──────────────┐
+│       User           │      Attributes         │    Result    │
+├──────────────────────┼─────────────────────────┼──────────────┤
+│ Dr. Emergency Dept   │ Doctor, Emergency, L2   │ ✓ GRANTED    │
+│ Nurse Michael Brown  │ Nurse, Emergency, L2    │ ✓ GRANTED    │
+│ Dr. Emily Carter     │ Doctor, Cardiology, L3  │ ✗ DENIED     │
+└──────────────────────┴─────────────────────────┴──────────────┘
+
+```

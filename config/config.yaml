@@ -1,0 +1,188 @@
+# System Configuration
+system:
+  name: "Healthcare CP-ABE System"
+  version: "1.0.0"
+  environment: "development"  # development, staging, production
+
+# Storage Configuration
+storage:
+  base_dir: "storage"
+  encrypted_files_dir: "${storage.base_dir}/encrypted"
+  keys_dir: "${storage.base_dir}/keys"
+  metadata_dir: "${storage.base_dir}/metadata"
+  users_dir: "${storage.base_dir}/users"
+  policies_dir: "${storage.base_dir}/policies"
+  audit_logs_dir: "${storage.base_dir}/audit_logs"
+
+# Cryptography Configuration
+crypto:
+  # CP-ABE Settings
+  cpabe:
+    curve: "SS512"  # Elliptic curve for pairing (SS512 = 80-bit security)
+    key_size: 256   # AES key size in bits
+    
+  # AES Settings
+  aes:
+    mode: "CBC"     # Block cipher mode
+    key_size: 256   # Key size in bits (AES-256)
+    iv_size: 16     # IV size in bytes (128 bits)
+    
+  # Hash Settings
+  hash:
+    algorithm: "sha3_256"  # SHA-3 with 256-bit output
+    chunk_size: 8192       # Chunk size for file hashing (bytes)
+
+# Security Policies
+security:
+  # Key Management
+  key_rotation:
+    enabled: true
+    interval_days: 90  # Rotate keys every 90 days
+    
+  # Password Requirements
+  password:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_digits: true
+    require_special: true
+    
+  # Session Management
+  session:
+    timeout_minutes: 30
+    max_concurrent_sessions: 3
+    
+  # Access Control
+  access_control:
+    enforce_clearance_levels: true
+    allow_attribute_inheritance: true
+    require_mfa_for_admin: false  # Multi-factor auth (future)
+
+# Audit Logging
+audit:
+  enabled: true
+  log_all_access_attempts: true
+  log_policy_changes: true
+  log_user_changes: true
+  retention_days: 365
+  
+# Predefined Roles and Attributes
+roles:
+  - name: "Doctor"
+    default_clearance: "L2"
+    permissions:
+      - "read_patient_records"
+      - "write_patient_records"
+      - "access_lab_results"
+      
+  - name: "Nurse"
+    default_clearance: "L1"
+    permissions:
+      - "read_patient_records"
+      - "update_patient_vitals"
+      - "access_medication_records"
+      
+  - name: "Lab"
+    default_clearance: "L1"
+    permissions:
+      - "read_lab_orders"
+      - "write_lab_results"
+      - "access_test_data"
+      
+  - name: "Admin"
+    default_clearance: "L3"
+    permissions:
+      - "manage_users"
+      - "manage_policies"
+      - "access_audit_logs"
+      - "system_administration"
+
+# Departments
+departments:
+  - "Cardiology"
+  - "Emergency"
+  - "Radiology"
+  - "Pathology"
+  - "Surgery"
+  - "Pediatrics"
+  - "Oncology"
+  - "Neurology"
+  - "Orthopedics"
+  - "ICU"
+  - "Pharmacy"
+  - "IT"
+  - "Administration"
+
+# Clearance Levels
+clearance_levels:
+  L1:
+    description: "Basic access - routine tasks"
+    priority: 1
+  L2:
+    description: "Intermediate access - sensitive data"
+    priority: 2
+  L3:
+    description: "High access - critical systems and data"
+    priority: 3
+
+# Policy Templates
+policy_templates:
+  - name: "department_specific"
+    expression: "{role} AND {department}"
+    description: "Access limited to specific role in specific department"
+    
+  - name: "emergency_override"
+    expression: "(Doctor OR Nurse) AND Emergency"
+    description: "Emergency department staff override"
+    
+  - name: "high_clearance"
+    expression: "ClearanceLevel:L3"
+    description: "High clearance level required"
+    
+  - name: "admin_full_access"
+    expression: "Admin AND ClearanceLevel:L3"
+    description: "Full administrative access"
+
+# File Type Configuration
+file_types:
+  medical_record:
+    description: "Patient medical records"
+    default_policy: "department_specific"
+    retention_years: 7
+    
+  lab_report:
+    description: "Laboratory test results"
+    default_policy: "Lab OR Doctor OR (Nurse AND ClearanceLevel:L2)"
+    retention_years: 10
+    
+  xray:
+    description: "X-ray and imaging files"
+    default_policy: "(Doctor AND Radiology) OR ClearanceLevel:L3"
+    retention_years: 10
+    
+  prescription:
+    description: "Medication prescriptions"
+    default_policy: "(Doctor OR Pharmacist)"
+    retention_years: 5
+
+# Performance Settings
+performance:
+  max_file_size_mb: 100
+  chunk_size_kb: 64
+  enable_caching: true
+  cache_ttl_seconds: 300
+
+# Development Settings
+development:
+  debug_mode: true
+  verbose_logging: true
+  auto_create_test_users: false
+  bypass_integrity_check: false  # NEVER set to true in production!
+
+# Production Settings (override when environment=production)
+production:
+  debug_mode: false
+  verbose_logging: false
+  require_hsm_for_master_key: true  # Require Hardware Security Module
+  enforce_ip_whitelist: true
+  enable_intrusion_detection: true
