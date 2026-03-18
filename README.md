@@ -253,3 +253,6 @@ This system is designed for educational purposes. Production deployment requires
 - Compliance review (HIPAA, GDPR)
 - Penetration testing
 - Professional cryptographic review
+=======
+# secure-healthcare-data-access-system
+Secure healthcare data sharing system using Attribute-Based Encryption
